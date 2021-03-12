@@ -2,7 +2,7 @@
 
 namespace RevisionsExtended\Capabilities;
 
-use function RevisionsExtended\Post_Status\get_revision_statuses;
+use function RevisionsExtended\Post_Status\validate_revision_status;
 
 defined( 'WPINC' ) || die();
 
@@ -23,11 +23,10 @@ add_filter( 'map_meta_cap', __NAMESPACE__ . '\map_meta_caps', 10, 4 );
  */
 function map_meta_caps( $caps, $cap, $user_id, $args ) {
 	if ( in_array( $cap, array( 'delete_post', 'edit_post', 'read_post' ), true ) ) {
-		$post              = get_post( $args[0] );
-		$status            = get_post_status( $post );
-		$revision_statuses = wp_list_pluck( get_revision_statuses(), 'name' );
+		$post   = get_post( $args[0] );
+		$status = get_post_status( $post );
 
-		if ( $post && 'revision' === get_post_type( $post ) && in_array( $status, $revision_statuses, true ) ) {
+		if ( $post && 'revision' === get_post_type( $post ) && validate_revision_status( $status ) ) {
 			$revision_object = get_post_type_object( 'revision' );
 			$parent          = get_post( $post->post_parent );
 			$parent_object   = get_post_type_object( get_post_type( $parent ) );

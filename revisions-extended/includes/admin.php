@@ -8,6 +8,7 @@ use function RevisionsExtended\get_assets_path;
 use function RevisionsExtended\get_build_asset_info;
 use function RevisionsExtended\get_includes_path;
 use function RevisionsExtended\get_views_path;
+use function RevisionsExtended\Post_Status\get_revision_status_slugs;
 use function RevisionsExtended\Revision\post_type_supports_updates;
 use function RevisionsExtended\Revision\get_post_revisions;
 use function RevisionsExtended\Revision\update_post_from_revision;
@@ -661,7 +662,7 @@ function filter_display_post_states( $post_states, $post ) {
 		}
 	} elseif ( post_type_supports_updates( get_post_type( $post ) ) ) {
 		$args      = array(
-			'post_status' => 'future',
+			'post_status' => get_revision_status_slugs(),
 		);
 		$revisions = get_post_revisions( $post, $args );
 

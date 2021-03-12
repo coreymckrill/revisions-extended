@@ -46,6 +46,10 @@ defined( 'WPINC' ) || die();
 				);
 				?>
 			</p>
+		<?php else : ?>
+			<p>
+				<?php echo esc_html( get_post_status_object( $revision->post_status )->label ); ?>
+			</p>
 		<?php endif; ?>
 	<?php endif; ?>
 

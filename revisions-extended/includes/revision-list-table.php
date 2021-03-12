@@ -6,6 +6,8 @@ use WP_List_Table, WP_Post, WP_Query;
 use function RevisionsExtended\Admin\get_updates_subpage_url;
 use function RevisionsExtended\Admin\get_compare_url;
 use function RevisionsExtended\Post_Status\get_revision_statuses;
+use function RevisionsExtended\Post_Status\get_revision_status_slugs;
+use function RevisionsExtended\Post_Status\validate_revision_status;
 use function RevisionsExtended\Revision\get_edit_revision_link;
 use function RevisionsExtended\Revision\get_revisions_by_parent_type;
 
@@ -59,15 +61,20 @@ class Revision_List_Table extends WP_List_Table {
 
 		$orderby   = wp_unslash( filter_input( INPUT_GET, 'orderby' ) );
 		$order     = wp_unslash( filter_input( INPUT_GET, 'order' ) );
+		$status    = wp_unslash( filter_input( INPUT_GET, 'post_status' ) );
 		$search    = wp_unslash( filter_input( INPUT_GET, 's' ) );
 		$parent_id = filter_input( INPUT_GET, 'p', FILTER_VALIDATE_INT );
 
 		$query_args = array(
-			'post_status'    => wp_list_pluck( get_revision_statuses(), 'name' ),
+			'post_status'    => get_revision_status_slugs(),
 			'posts_per_page' => $per_page,
 			'orderby'        => $orderby ?: 'date ID',
 			'order'          => $order ?: 'asc',
 		);
+
+		if ( $status && validate_revision_status( $status ) ) {
+			$query_args['post_status'] = $status;
+		}
 
 		if ( $search ) {
 			$query_args['s'] = $search;
@@ -100,6 +107,7 @@ class Revision_List_Table extends WP_List_Table {
 	protected function get_views() {
 		$view_links = array();
 
+		$current_status    = wp_unslash( filter_input( INPUT_GET, 'post_status' ) );
 		$revision_statuses = get_revision_statuses();
 		$posts_by_status   = (array) wp_count_posts( 'revision' );
 		$total_posts       = array_sum( array_intersect_key( $posts_by_status, $revision_statuses ) );
@@ -119,10 +127,43 @@ class Revision_List_Table extends WP_List_Table {
 		$view_links['all'] = sprintf(
 			'<a href="%1$s"%2$s%3$s>%4$s</a>',
 			esc_url( get_updates_subpage_url( $this->parent_post_type ) ),
-			' class="current"',
-			' aria-current="page"',
+			$current_status ? '' : ' class="current"',
+			$current_status ? '' : ' aria-current="page"',
 			$all_inner_html
 		);
+
+		foreach ( $revision_statuses as $slug => $obj ) {
+			if ( empty( $posts_by_status[ $slug ] ) ) {
+				continue;
+			}
+
+			$inner_html = sprintf(
+				/* translators: 1: Post status. 2: Number of posts. */
+				_nx(
+					'%1$s <span class="count">(%2$s)</span>',
+					'%1$s <span class="count">(%2$s)</span>',
+					$posts_by_status[ $slug ],
+					'posts',
+					'revisions-extended'
+				),
+				esc_html( $obj->label ),
+				number_format_i18n( $posts_by_status[ $slug ] )
+			);
+
+			$view_url = add_query_arg(
+				'post_status',
+				$slug,
+				get_updates_subpage_url( $this->parent_post_type )
+			);
+
+			$view_links[ $slug ] = sprintf(
+				'<a href="%1$s"%2$s%3$s>%4$s</a>',
+				esc_url( $view_url ),
+				$current_status === $slug ? ' class="current"' : '',
+				$current_status === $slug ? ' aria-current="page"' : '',
+				$inner_html
+			);
+		}
 
 		if ( count( $view_links ) > 1 ) {
 			return $view_links;
@@ -203,7 +244,7 @@ class Revision_List_Table extends WP_List_Table {
 	protected function get_sortable_columns() {
 		return array(
 			'title'    => 'title',
-			'status'   => array( 'date', 'asc' ),
+			'status'   => array( 'date title', 'asc' ),
 			'modified' => array( 'modified', true ),
 		);
 	}
@@ -237,7 +278,7 @@ class Revision_List_Table extends WP_List_Table {
 				<span class="screen-reader-text">
 				<?php
 				printf(
-				/* translators: %s: Post title. */
+					/* translators: %s: Post title. */
 					__( '&#8220;%s&#8221; is locked', 'revisions-extended' ),
 					_draft_or_post_title( $post )
 				);
@@ -410,6 +451,13 @@ class Revision_List_Table extends WP_List_Table {
 					get_the_time( __( 'Y/m/d', 'revisions-extended' ), $post ),
 					/* translators: Post time format. See https://www.php.net/manual/datetime.format.php */
 					get_the_time( __( 'g:i a', 'revisions-extended' ), $post )
+				);
+				break;
+			case 'draft':
+			case 'pending':
+				printf(
+					'<strong>%s</strong>',
+					esc_html( $object->label )
 				);
 				break;
 		}

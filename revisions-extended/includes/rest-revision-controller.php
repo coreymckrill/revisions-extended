@@ -4,7 +4,7 @@ namespace RevisionsExtended;
 
 use WP_Error, WP_Post, WP_Post_Type;
 use WP_REST_Posts_Controller, WP_REST_Revisions_Controller, WP_REST_Request, WP_REST_Response, WP_REST_Server;
-use function RevisionsExtended\Post_Status\get_revision_statuses;
+use function RevisionsExtended\Post_Status\get_revision_status_slugs;
 use function RevisionsExtended\Post_Status\validate_revision_status;
 use function RevisionsExtended\Revision\update_post_from_revision;
 
@@ -104,7 +104,7 @@ class REST_Revision_Controller extends WP_REST_Posts_Controller {
 
 		$parent_endpoint_args = parent::get_endpoint_args_for_item_schema( $method );
 
-		$parent_endpoint_args['status']['enum'] = wp_list_pluck( get_revision_statuses(), 'name' );
+		$parent_endpoint_args['status']['enum'] = get_revision_status_slugs();
 
 		return array_intersect_key( $parent_endpoint_args, array_fill_keys( $revision_fields, '' ) );
 	}
@@ -322,7 +322,7 @@ class REST_Revision_Controller extends WP_REST_Posts_Controller {
 	public function get_item_schema() {
 		$schema = parent::get_item_schema();
 
-		$schema['properties']['status']['enum'] = wp_list_pluck( get_revision_statuses(), 'name' );
+		$schema['properties']['status']['enum'] = get_revision_status_slugs();
 		$schema['properties']['parent']         = array(
 			'description' => __( 'The ID for the parent of the object.', 'revisions-extended' ),
 			'type'        => 'integer',

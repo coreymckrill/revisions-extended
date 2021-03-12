@@ -3,7 +3,7 @@
 namespace RevisionsExtended\Revision;
 
 use WP_Error, WP_Post, WP_Post_Type, WP_Query;
-use function RevisionsExtended\Post_Status\get_revision_statuses;
+use function RevisionsExtended\Post_Status\get_revision_status_slugs;
 use function RevisionsExtended\Post_Status\validate_revision_status;
 
 defined( 'WPINC' ) || die();
@@ -111,14 +111,17 @@ function get_post_revisions( $post_id = 0, $args = null ) {
 function get_revisions_by_parent_type( $parent_post_type, $args = array(), $wp_query = false ) {
 	global $wpdb;
 
+	$statuses_in = array_map( 'esc_sql', get_revision_status_slugs() );
+	$statuses_in = "'" . implode( "','", $statuses_in ) . "'";
+
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	$valid_ids = $wpdb->get_col(
 		$wpdb->prepare(
 			"
-		SELECT revisions.ID
-		FROM {$wpdb->posts} revisions
-			JOIN {$wpdb->posts} parents ON parents.ID = revisions.post_parent AND parents.post_type = %s
-		WHERE revisions.post_type = 'revision' AND revisions.post_status = 'future'",
+			SELECT revisions.ID
+			FROM {$wpdb->posts} revisions
+				JOIN {$wpdb->posts} parents ON parents.ID = revisions.post_parent AND parents.post_type = %s
+			WHERE revisions.post_type = 'revision' AND revisions.post_status IN ($statuses_in)",
 			$parent_post_type
 		)
 	);
@@ -180,7 +183,7 @@ function put_post_revision( $post = null, $autosave = false ) {
 
 	/**
 	 * The _wp_post_revision_data function overrides some fields that need to be different
-	 * for pending/scheduled revisions. We could override that function, but we'd still need
+	 * for our extended revisions. We could override that function, but we'd still need
 	 * to override this one as well, so we might as well just do it in one place.
 	 */
 	$keep_props = array( 'post_status', 'post_date', 'post_date_gmt' );
@@ -305,7 +308,7 @@ function get_edit_revision_link( $revision_id ) {
 }
 
 /**
- * Ensure pending/scheduled revision posts use the same slug naming convention as normal revisions.
+ * Ensure extended revision posts use the same slug naming convention as normal revisions.
  *
  * @param string|null $override
  * @param string      $slug
@@ -316,7 +319,7 @@ function get_edit_revision_link( $revision_id ) {
  * @return string|null
  */
 function filter_pre_wp_unique_post_slug( $override, $slug, $post_ID, $post_status, $post_type ) {
-	$statuses = wp_list_pluck( get_revision_statuses(), 'name' );
+	$statuses = get_revision_status_slugs();
 
 	if ( 'revision' === $post_type && in_array( $post_status, $statuses, true ) ) {
 		$override = $slug;

@@ -20,9 +20,20 @@ function get_revision_statuses() {
 	return array_intersect_key(
 		$stati,
 		array(
-			'future' => true,
+			'draft'   => true,
+			'future'  => true,
+			'pending' => true,
 		)
 	);
+}
+
+/**
+ * Get an array of revision-specific post status slugs.
+ *
+ * @return array
+ */
+function get_revision_status_slugs() {
+	return wp_list_pluck( get_revision_statuses(), 'name' );
 }
 
 /**
@@ -35,7 +46,7 @@ function get_revision_statuses() {
  * @return bool
  */
 function validate_revision_status( $status ) {
-	$statuses = wp_list_pluck( get_revision_statuses(), 'name' );
+	$status_slugs = get_revision_status_slugs();
 
-	return in_array( $status, $statuses, true );
+	return in_array( $status, $status_slugs, true );
 }

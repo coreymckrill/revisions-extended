@@ -4,7 +4,7 @@ namespace RevisionsExtended;
 
 use WP_Error, WP_Post;
 use WP_REST_Controller, WP_REST_Posts_Controller, WP_REST_Revisions_Controller, WP_REST_Request, WP_REST_Response, WP_REST_Server;
-use function RevisionsExtended\Post_Status\get_revision_statuses;
+use function RevisionsExtended\Post_Status\get_revision_status_slugs;
 use function RevisionsExtended\Revision\put_post_revision;
 
 defined( 'WPINC' ) || die();
@@ -110,7 +110,7 @@ class REST_Revisions_Controller extends WP_REST_Revisions_Controller {
 
 		$parent_endpoint_args = $this->parent_controller->get_endpoint_args_for_item_schema( $method );
 
-		$parent_endpoint_args['status']['enum'] = wp_list_pluck( get_revision_statuses(), 'name' );
+		$parent_endpoint_args['status']['enum'] = get_revision_status_slugs();
 
 		return array_intersect_key( $parent_endpoint_args, array_fill_keys( $revision_fields, '' ) );
 	}
@@ -257,7 +257,7 @@ class REST_Revisions_Controller extends WP_REST_Revisions_Controller {
 		$schema['properties']['status'] = array(
 			'description' => __( 'A named status for the object.', 'revisions-extended' ),
 			'type'        => 'string',
-			'enum'        => wp_list_pluck( get_revision_statuses(), 'name' ),
+			'enum'        => get_revision_status_slugs(),
 			'context'     => array( 'view', 'edit' ),
 		);
 
@@ -277,7 +277,7 @@ class REST_Revisions_Controller extends WP_REST_Revisions_Controller {
 			'description' => __( 'Limit result set to revisions assigned one or more statuses.', 'revisions-extended' ),
 			'type'        => 'array',
 			'items'       => array(
-				'enum' => array_merge( array( 'any' ), wp_list_pluck( get_revision_statuses(), 'name' ) ),
+				'enum' => array_merge( array( 'any' ), get_revision_status_slugs() ),
 				'type' => 'string',
 			),
 		);
@@ -299,7 +299,7 @@ class REST_Revisions_Controller extends WP_REST_Revisions_Controller {
 		if ( isset( $registered['status'], $request['status'] ) && ! in_array( 'any', $request['status'], true ) ) {
 			$args['post_status'] = $request['status'];
 		} else {
-			$args['post_status'] = wp_list_pluck( get_revision_statuses(), 'name' );
+			$args['post_status'] = get_revision_status_slugs();
 		}
 
 		return $args;
