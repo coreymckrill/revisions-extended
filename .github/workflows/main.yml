@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [ trunk ]
+  pull_request:
+    branches: [ trunk ]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          npm install
+          npm run setup
+
+      - name: Lint JavaScript
+        run: npm run lint:js
+
+      - name: Run JavaScript unit tests
+        run: npm run test:unit
+
+      - name: Lint PHP
+        run: npm run lint:php
+
